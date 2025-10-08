@@ -1,7 +1,7 @@
 import fetch from "node-fetch";
 import "dotenv/config";
 import { DB } from "../connect.js";
-import { addProductToDatabase, updateProduct } from "./newtemp.js"; // ✅ your correct path
+import { addProductToDatabase, updateProduct } from "./newtemp.js";
 
 const WP_URL = process.env.WP_URL;
 const WP_CONSUMER_KEY = process.env.WP_CONSUMER_KEY;
@@ -14,6 +14,7 @@ function getAuthHeader() {
 
 // ---------------- CATEGORY HELPERS ----------------
 async function getCategoryByName(name) {
+  if (!name) return null;
   try {
     const res = await fetch(`${WP_URL}/wp-json/wc/v3/products/categories?search=${encodeURIComponent(name)}`, {
       headers: { Authorization: getAuthHeader() },
@@ -51,7 +52,6 @@ async function createCategory(name) {
 }
 
 async function getOrCreateCategory(name) {
-  if (!name) return null;
   let category = await getCategoryByName(name);
   if (!category) category = await createCategory(name);
   return category?.id || null;
@@ -63,7 +63,6 @@ async function getProductBySKU(sku) {
     const res = await fetch(`${WP_URL}/wp-json/wc/v3/products?sku=${sku}`, {
       headers: { Authorization: getAuthHeader() },
     });
-
     const contentType = res.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
       console.error(`❌ WooCommerce did not return JSON for SKU ${sku}`);
@@ -71,7 +70,6 @@ async function getProductBySKU(sku) {
       console.error("Response HTML:", text.slice(0, 300));
       return null;
     }
-
     const data = await res.json();
     return data.length > 0 ? data[0] : null;
   } catch (err) {
@@ -83,7 +81,7 @@ async function getProductBySKU(sku) {
 // ---------------- SAFE UPSERT (LOCAL + WP) ----------------
 export async function upsertSingleProduct(product) {
   try {
-    // 1️⃣ Find product in local DB by productUrl
+    // 1️⃣ Check if product exists locally
     let dbProduct = await new Promise((resolve) => {
       DB.get(
         `SELECT * FROM PRODUCTS WHERE productUrl = ?`,
@@ -97,7 +95,7 @@ export async function upsertSingleProduct(product) {
       );
     });
 
-    // 2️⃣ If not found — insert new
+    // 2️⃣ Insert or update locally
     if (!dbProduct) {
       console.log(`🆕 Local product not found — inserting new: ${product.productName}`);
       const newId = await addProductToDatabase(product);
@@ -107,14 +105,13 @@ export async function upsertSingleProduct(product) {
       await updateProduct(product);
     }
 
-    // 3️⃣ Make sure we have a productId
     const sku = dbProduct.productId?.toString();
     if (!sku) {
       console.warn(`⚠️ Skipping product — missing productId after insert: ${product.productName}`);
       return;
     }
 
-    // 4️⃣ Check if product exists in WooCommerce
+    // 3️⃣ Check if product exists in WooCommerce
     const existing = await getProductBySKU(sku);
     let method = "POST";
     let endpoint = `${WP_URL}/wp-json/wc/v3/products`;
@@ -127,7 +124,7 @@ export async function upsertSingleProduct(product) {
       console.log(`🆕 Creating new WooCommerce product: ${product.productName}`);
     }
 
-    // 5️⃣ Prepare payload
+    // 4️⃣ Prepare payload
     const categoryId = await getOrCreateCategory(product.catName);
 
     // Handle images safely
@@ -171,9 +168,10 @@ export async function upsertSingleProduct(product) {
       ],
     };
 
+    // Only add images when creating new product
     if (!existing) payload.images = images;
 
-    // 6️⃣ Push to WooCommerce
+    // 5️⃣ Push to WooCommerce
     const res = await fetch(endpoint, {
       method,
       headers: {
