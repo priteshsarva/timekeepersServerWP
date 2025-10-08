@@ -434,13 +434,13 @@ async function addProductToDatabase(product) {
             product.productShortDescription,
             product.catName,
             product.productFetchedFrom,
-
             Date.now() // Add current timestamp for new products
         ]);
 
         // Get the last inserted row ID
         const row = await DB.get(`SELECT last_insert_rowid() as lastID`);
         const lastID = row.lastID;
+        // call wordpress insert product
 
         if (!lastID) {
             throw new Error('Failed to retrieve last inserted ID');
@@ -751,6 +751,7 @@ async function updateProduct(product) {
 
                 if (result.changes === 1) {
                     console.log(JSON.stringify({ status: 200, message: `Data updated with id: ${productId}` }));
+                    // call update wordpress logic
                 } else {
                     console.log(JSON.stringify({ status: 201, message: `No data has been changed` }));
                 }
