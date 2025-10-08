@@ -81,35 +81,37 @@ async function getProductBySKU(sku) {
 // ---------------- SAFE UPSERT (LOCAL + WP) ----------------
 export async function upsertSingleProduct(product) {
   try {
-    // 1️⃣ Check if product exists locally
-    let dbProduct = await new Promise((resolve) => {
-      DB.get(
-        `SELECT * FROM PRODUCTS WHERE productUrl = ?`,
-        [product.productUrl],
-        (err, row) => {
-          if (err) {
-            console.error("❌ DB check error:", err);
-            resolve(null);
-          } else resolve(row);
-        }
-      );
-    });
+    // // 1️⃣ Check if product exists locally
+    // let dbProduct = await new Promise((resolve) => {
+    //   DB.get(
+    //     `SELECT * FROM PRODUCTS WHERE productUrl = ?`,
+    //     [product.productUrl],
+    //     (err, row) => {
+    //       if (err) {
+    //         console.error("❌ DB check error:", err);
+    //         resolve(null);
+    //       } else resolve(row);
+    //     }
+    //   );
+    // });
 
-    // 2️⃣ Insert or update locally
-    if (!dbProduct) {
-      console.log(`🆕 Local product not found — inserting new: ${product.productName}`);
-      const newId = await addProductToDatabase(product);
-      dbProduct = { ...product, productId: newId };
-    } else {
-      console.log(`🟡 Local product exists — updating: ${dbProduct.productName}`);
-      await updateProduct(product);
-    }
+    // // 2️⃣ Insert or update locally
+    // if (!dbProduct) {
+    //   console.log(`🆕 Local product not found — inserting new: ${product.productName}`);
+    //   const newId = await addProductToDatabase(product);
+    //   dbProduct = { ...product, productId: newId };
+    // } else {
+    //   console.log(`🟡 Local product exists — updating: ${dbProduct.productName}`);
+    //   await updateProduct(product);
+    // }
 
-    const sku = dbProduct.productId?.toString();
-    if (!sku) {
-      console.warn(`⚠️ Skipping product — missing productId after insert: ${product.productName}`);
-      return;
-    }
+    // const sku = dbProduct.productId?.toString();
+    // if (!sku) {
+    //   console.warn(`⚠️ Skipping product — missing productId after insert: ${product.productName}`);
+    //   return;
+    // }
+
+    const sku= product.productId
 
     // 3️⃣ Check if product exists in WooCommerce
     const existing = await getProductBySKU(sku);

@@ -440,7 +440,18 @@ async function addProductToDatabase(product) {
         // Get the last inserted row ID
         const row = await DB.get(`SELECT last_insert_rowid() as lastID`);
         const lastID = row.lastID;
+        
         // call wordpress insert product
+        try {
+            const wpProduct = {
+                ...product, 
+                productId: lastID,  // Pass the last inserted ID
+            };
+            await upsertSingleProduct(wpProduct); // WordPress API call
+        } catch (wpError) {
+            console.error('Error inserting product into WordPress:', wpError.message);
+        }
+
 
         if (!lastID) {
             throw new Error('Failed to retrieve last inserted ID');
@@ -752,6 +763,21 @@ async function updateProduct(product) {
                 if (result.changes === 1) {
                     console.log(JSON.stringify({ status: 200, message: `Data updated with id: ${productId}` }));
                     // call update wordpress logic
+
+                    try {
+                        const wpProduct = {
+                            ...product, 
+                            productId,  // Pass the productId for updating
+                        };
+                        await upsertSingleProduct(wpProduct); // WordPress API call
+                    } catch (wpError) {
+                        console.error('Error updating product in WordPress:', wpError.message);
+                    }
+
+
+
+
+                    
                 } else {
                     console.log(JSON.stringify({ status: 201, message: `No data has been changed` }));
                 }
