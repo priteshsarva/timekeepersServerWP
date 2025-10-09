@@ -339,8 +339,6 @@ async function scrapeProducts(page, categories, baseUrl) {
             console.log("from try block");
             for (const eachproduct of catProductss) {
                 log(eachproduct);
-              // await updateProduct(eachproduct);
-                await upsertSingleProduct(eachproduct);
                 console.log("From Each Product");
             }
             products.push(...catProductss)
@@ -438,16 +436,23 @@ async function addProductToDatabase(product) {
         ]);
 
         // Get the last inserted row ID
-        const row = await DB.get(`SELECT last_insert_rowid() as lastID`);
+        // const row = await DB.get(`SELECT last_insert_rowid() as lastID`);
+
+        const row = await new Promise((resolve, reject) => {
+            DB.get(`SELECT last_insert_rowid() as lastID`, (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
         const lastID = row.lastID;
-        
+        console.log(row.lastID);
+
         // call wordpress insert product
         try {
             const wpProduct = {
-                ...product, 
+                ...product,
                 productId: lastID,  // Pass the last inserted ID
             };
-         //   await upsertSingleProduct(wpProduct); // WordPress API call
             await insertProductToWP(wpProduct);
 
         } catch (wpError) {
@@ -768,10 +773,9 @@ async function updateProduct(product) {
 
                     try {
                         const wpProduct = {
-                            ...product, 
+                            ...product,
                             productId,  // Pass the productId for updating
                         };
-                    //    await upsertSingleProduct(wpProduct); // WordPress API call
                         await updateProductToWP(wpProduct);
 
                     } catch (wpError) {
@@ -781,7 +785,7 @@ async function updateProduct(product) {
 
 
 
-                    
+
                 } else {
                     console.log(JSON.stringify({ status: 201, message: `No data has been changed` }));
                 }
