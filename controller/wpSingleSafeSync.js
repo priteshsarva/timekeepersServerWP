@@ -177,10 +177,10 @@ export async function updateProductToWP(product) {
     const regularPrice = ((parseFloat(product.productOriginalPrice) || 0) + 1200).toString();
 
     const payload = {
-      name: product.productName,
-      regular_price: regularPrice,
+      // name: product.productName,
+      // regular_price: regularPrice,
       stock_status: stockStatus,
-      categories: categoryId ? [{ id: categoryId }] : [],
+      // categories: categoryId ? [{ id: categoryId }] : [],
       meta_data: [
         { key: "productFetchedFrom", value: product.productFetchedFrom },
         { key: "videoUrl", value: product.videoUrl || "" },

@@ -727,12 +727,12 @@ async function updateProduct(product) {
                 updates.push(`productOriginalPrice = ?`);
                 values.push(product.productOriginalPrice);
             }
-            if (typeof product.catName !== 'undefined') {
-                if (product.catName !== row[0].catName) {
-                    updates.push(`catName = ?`);
-                    values.push(product.catName + ", " + row[0].catName);
-                }
-            }
+            //   if (typeof product.catName !== 'undefined') {
+            //        if (product.catName !== row[0].catName) {
+            //            updates.push(`catName = ?`);
+            //            values.push(product.catName + ", " + row[0].catName);
+            //        }
+            //}
 
             if (typeof product.sizeName !== 'undefined') {
                 updates.push(`sizeName = ?`);
@@ -765,13 +765,25 @@ async function updateProduct(product) {
                 const params = [...values, productId]
                 // const params = ['1500', '[45,48,50,52]', 1738772214590, 1]
                 console.log("Executing update query:", sql, [...values, productId]);
-                const stmt = DB.prepare(sql);
-                const result = stmt.run(...params);
+                //  const stmt = DB.prepare(sql);
+                // const result = stmt.run(...params);
+                // ✅ Use Promise wrapper to handle .run correctly
 
-                if (result.changes === 1) {
+                const changes = await new Promise((resolve, reject) => {
+                    const stmt = DB.prepare(sql);
+                    stmt.run(...params, function (err) {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve(this.changes);
+                        }
+                    });
+                    stmt.finalize();
+                });
+
+                if (changes === 1) {
                     console.log(JSON.stringify({ status: 200, message: `Data updated with id: ${productId}` }));
                     // call update wordpress logic
-
                     try {
                         const wpProduct = {
                             ...product,
@@ -785,6 +797,18 @@ async function updateProduct(product) {
 
                 } else {
                     console.log(JSON.stringify({ status: 201, message: `No data has been changed` }));
+                    // ✅ Still trigger WP update for sync safety
+                    try {
+                        const wpProduct = {
+                            ...product,
+                            productId,  // Pass the productId for updating
+                        };
+                        await updateProductToWP(wpProduct);
+
+                    } catch (wpError) {
+                        console.error('Error updating product in WordPress:', wpError.message);
+                    }
+
                 }
             } catch (err) {
                 if (err.code === 'SQLITE_CONSTRAINT') {
