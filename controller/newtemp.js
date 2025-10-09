@@ -413,63 +413,65 @@ async function addProductToDatabase(product) {
     try {
         const sql = `INSERT INTO PRODUCTS (
             productName, productOriginalPrice, productBrand, featuredimg, 
-            sizeName, productUrl, imageUrl,videoUrl, availability, productShortDescription, 
+            sizeName, productUrl, imageUrl, videoUrl, availability, productShortDescription, 
             catName, productFetchedFrom, productLastUpdated
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)`;
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-        // Execute the INSERT query
-        await DB.run(sql, [
-            product.productName,
-            product.productOriginalPrice,
-            product.productBrand,
-            product.featuredimg,
-            JSON.stringify(product.sizeName),
-            product.productUrl,
-            JSON.stringify(product.imageUrl),
-            product.videoUrl,
-            product.availability,
-            product.productShortDescription,
-            product.catName,
-            product.productFetchedFrom,
-            Date.now() // Add current timestamp for new products
-        ]);
+        // ✅ Wrap DB.run in Promise
+        await new Promise((resolve, reject) => {
+            DB.run(sql, [
+                product.productName,
+                product.productOriginalPrice,
+                product.productBrand,
+                product.featuredimg,
+                JSON.stringify(product.sizeName),
+                product.productUrl,
+                JSON.stringify(product.imageUrl),
+                product.videoUrl,
+                product.availability,
+                product.productShortDescription,
+                product.catName,
+                product.productFetchedFrom,
+                Date.now()
+            ], function (err) {
+                if (err) reject(err);
+                else resolve(this.lastID); // resolve immediately with inserted ID
+            });
+        });
 
-        // Get the last inserted row ID
-        // const row = await DB.get(`SELECT last_insert_rowid() as lastID`);
-
+        // ✅ Wrap DB.get in Promise to fetch last inserted rowid
         const row = await new Promise((resolve, reject) => {
             DB.get(`SELECT last_insert_rowid() as lastID`, (err, row) => {
                 if (err) reject(err);
                 else resolve(row);
             });
         });
-        const lastID = row.lastID;
-        console.log(row.lastID);
 
-        // call wordpress insert product
+        const lastID = row.lastID;
+        console.log("Last inserted ID:", lastID);
+
+        if (!lastID) throw new Error('Failed to retrieve last inserted ID');
+
+        // ✅ WordPress call (manually handled)
         try {
             const wpProduct = {
                 ...product,
-                productId: lastID,  // Pass the last inserted ID
+                productId: lastID,
             };
             await insertProductToWP(wpProduct);
-
         } catch (wpError) {
             console.error('Error inserting product into WordPress:', wpError.message);
         }
 
-
-        if (!lastID) {
-            throw new Error('Failed to retrieve last inserted ID');
-        }
-
-        console.log('Inserted product with ID:', lastID);
+        console.log('✅ Inserted product with ID:', lastID);
         return lastID;
+
     } catch (error) {
-        console.error('Error adding product to database:', error.message);
+        console.error('❌ Error adding product to database:', error.message);
         throw error;
     }
 }
+
 
 
 // Function to add many-to-many relationships
