@@ -74,6 +74,8 @@ async function getProductBySKU(sku) {
 // ========== INSERT PRODUCT TO WORDPRESS ==========
 // =================================================
 export async function insertProductToWP(product) {
+  console.log("from insertProductToWP");
+  
   try {
     const sku = product.productId?.toString();
     if (!sku) {
@@ -153,6 +155,8 @@ export async function insertProductToWP(product) {
 // ========== UPDATE PRODUCT TO WORDPRESS ==========
 // =================================================
 export async function updateProductToWP(product) {
+  console.log("from updateProductToWP");
+  
   try {
     const sku = product.productId?.toString();
     if (!sku) {

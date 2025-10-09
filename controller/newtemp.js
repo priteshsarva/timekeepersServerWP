@@ -10,7 +10,6 @@ import { rejects } from 'assert';
 import "dotenv/config";
 import { exec } from 'child_process';
 import { humanizePage, humanType } from './humanize.js';
-import { upsertProduct } from './wpProduct.js';
 import { insertProductToWP, updateProductToWP } from "./wpSingleSafeSync.js";
 import { log } from 'console';
 
@@ -338,7 +337,7 @@ async function scrapeProducts(page, categories, baseUrl) {
         try {
             console.log("from try block");
             for (const eachproduct of catProductss) {
-                log(eachproduct);
+                await updateProduct(eachproduct);
                 console.log("From Each Product");
             }
             products.push(...catProductss)
@@ -781,10 +780,6 @@ async function updateProduct(product) {
                     } catch (wpError) {
                         console.error('Error updating product in WordPress:', wpError.message);
                     }
-
-
-
-
 
                 } else {
                     console.log(JSON.stringify({ status: 201, message: `No data has been changed` }));
