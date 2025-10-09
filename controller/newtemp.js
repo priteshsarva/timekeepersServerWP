@@ -11,7 +11,7 @@ import "dotenv/config";
 import { exec } from 'child_process';
 import { humanizePage, humanType } from './humanize.js';
 import { upsertProduct } from './wpProduct.js';
-import { upsertSingleProduct } from './wpSingleSafeSync.js';
+import { insertProductToWP, updateProductToWP } from "./wpSingleSafeSync.js";
 import { log } from 'console';
 
 // const baseUrls = ['https://oneshoess.cartpe.in', 'https://reseller-store.cartpe.in'];
@@ -447,7 +447,9 @@ async function addProductToDatabase(product) {
                 ...product, 
                 productId: lastID,  // Pass the last inserted ID
             };
-            await upsertSingleProduct(wpProduct); // WordPress API call
+         //   await upsertSingleProduct(wpProduct); // WordPress API call
+            await insertProductToWP(wpProduct);
+
         } catch (wpError) {
             console.error('Error inserting product into WordPress:', wpError.message);
         }
@@ -769,7 +771,9 @@ async function updateProduct(product) {
                             ...product, 
                             productId,  // Pass the productId for updating
                         };
-                        await upsertSingleProduct(wpProduct); // WordPress API call
+                    //    await upsertSingleProduct(wpProduct); // WordPress API call
+                        await updateProductToWP(wpProduct);
+
                     } catch (wpError) {
                         console.error('Error updating product in WordPress:', wpError.message);
                     }
