@@ -10,7 +10,6 @@ import { rejects } from 'assert';
 import "dotenv/config";
 import { exec } from 'child_process';
 import { humanizePage, humanType } from './humanize.js';
-import { insertProductToWP, updateProductToWP } from "./wpSingleSafeSync.js";
 import { log } from 'console';
 
 // const baseUrls = ['https://oneshoess.cartpe.in', 'https://reseller-store.cartpe.in'];
@@ -452,16 +451,7 @@ async function addProductToDatabase(product) {
 
         if (!lastID) throw new Error('Failed to retrieve last inserted ID');
 
-        // ✅ WordPress call (manually handled)
-        try {
-            const wpProduct = {
-                ...product,
-                productId: lastID,
-            };
-            await insertProductToWP(wpProduct);
-        } catch (wpError) {
-            console.error('Error inserting product into WordPress:', wpError.message);
-        }
+      
 
         console.log('✅ Inserted product with ID:', lastID);
         return lastID;
@@ -783,31 +773,11 @@ async function updateProduct(product) {
 
                 if (changes === 1) {
                     console.log(JSON.stringify({ status: 200, message: `Data updated with id: ${productId}` }));
-                    // call update wordpress logic
-                    try {
-                        const wpProduct = {
-                            ...product,
-                            productId,  // Pass the productId for updating
-                        };
-                        await updateProductToWP(wpProduct);
-
-                    } catch (wpError) {
-                        console.error('Error updating product in WordPress:', wpError.message);
-                    }
+                
 
                 } else {
                     console.log(JSON.stringify({ status: 201, message: `No data has been changed` }));
-                    // ✅ Still trigger WP update for sync safety
-                    try {
-                        const wpProduct = {
-                            ...product,
-                            productId,  // Pass the productId for updating
-                        };
-                        await updateProductToWP(wpProduct);
-
-                    } catch (wpError) {
-                        console.error('Error updating product in WordPress:', wpError.message);
-                    }
+                   
 
                 }
             } catch (err) {

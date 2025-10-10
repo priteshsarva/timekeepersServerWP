@@ -81,6 +81,89 @@ async function getProductBySKU(sku) {
   }
 }
 
+// async function upsertProductSafe(product) {
+//   try {
+//     const sku = product.productId?.toString();
+//     if (!sku) {
+//       console.warn(`⚠️ Skipping product — missing productId: ${product.productName}`);
+//       return;
+//     }
+
+//     const existing = await getProductBySKU(sku);
+//     let method = "POST";
+//     let endpoint = `${WP_URL}/wp-json/wc/v3/products`;
+
+//     if (existing) {
+//       endpoint = `${WP_URL}/wp-json/wc/v3/products/${existing.id}`;
+//       method = "PUT";
+//       console.log(`ℹ️ Updating product ID ${existing.id}`);
+//     } else {
+//       console.log(`🆕 Creating new product: ${product.productName}`);
+//     }
+
+//     const categoryId = await getOrCreateCategory(product.catName);
+
+//     let images = [];
+//     try {
+//       const imgs = JSON.parse(product.imageUrl);
+//       images = imgs.map((src) => ({ src }));
+//     } catch {
+//       if (product.featuredimg) images.push({ src: product.featuredimg });
+//     }
+
+//     const regularPrice = ((product.productOriginalPrice || 0) + 1200).toString();
+
+//     const payload = {
+//       name: product.productName,
+//       type: "simple",
+//       regular_price: regularPrice,
+//       sku,
+//       description: product.productDescription || "",
+//       short_description: product.productShortDescription || "",
+//       categories: categoryId ? [{ id: categoryId }] : [],
+//       meta_data: [
+//         { key: "productFetchedFrom", value: product.productFetchedFrom },
+//         { key: "videoUrl", value: product.videoUrl || "" },
+//         { key: "availability", value: product.availability ? "instock" : "outofstock" },
+//         { key: "productOriginalPrice", value: product.productOriginalPrice },
+//         { key: "featuredimg", value: product.featuredimg },
+//         { key: "imageUrl", value: product.imageUrl },
+//         { key: "productBrand", value: product.productBrand },
+//         { key: "productLastUpdated", value: product.productLastUpdated },
+//         { key: "productDateCreation", value: product.productDateCreation},
+//         { key: "productShortDescription", value: product.productShortDescription},
+//         { key: "productDescription", value: product.productDescription},
+//       ],
+//       stock_status: product.availability ? "instock" : "outofstock",
+//     };
+
+//     // 🚫 Skip image reupload if updating
+//     if (!existing) {
+//       payload.images = images;
+//     }
+
+//     const res = await fetch(endpoint, {
+//       method,
+//       headers: {
+//         Authorization: getAuthHeader(),
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify(payload),
+//     });
+
+//     const data = await res.json();
+//     if (res.ok) {
+//       console.log(`✅ ${existing ? "Updated" : "Created"}: ${data.name} (ID: ${data.id})`);
+//     } else {
+//       console.error("❌ Error creating/updating product:", data);
+//     }
+//   } catch (err) {
+//     console.error("❌ Unexpected error:", err);
+//   }
+// }
+
+
+
 async function upsertProductSafe(product) {
   try {
     const sku = product.productId?.toString();
@@ -101,7 +184,7 @@ async function upsertProductSafe(product) {
       console.log(`🆕 Creating new product: ${product.productName}`);
     }
 
-    const categoryId = await getOrCreateCategory(product.catName);
+    const categoryId = !existing ? await getOrCreateCategory(product.catName) : null;
 
     let images = [];
     try {
@@ -113,14 +196,13 @@ async function upsertProductSafe(product) {
 
     const regularPrice = ((product.productOriginalPrice || 0) + 1200).toString();
 
+    // ✅ Base payload (shared between create + update)
     const payload = {
       name: product.productName,
       type: "simple",
-      regular_price: regularPrice,
       sku,
       description: product.productDescription || "",
       short_description: product.productShortDescription || "",
-      categories: categoryId ? [{ id: categoryId }] : [],
       meta_data: [
         { key: "productFetchedFrom", value: product.productFetchedFrom },
         { key: "videoUrl", value: product.videoUrl || "" },
@@ -130,15 +212,17 @@ async function upsertProductSafe(product) {
         { key: "imageUrl", value: product.imageUrl },
         { key: "productBrand", value: product.productBrand },
         { key: "productLastUpdated", value: product.productLastUpdated },
-        { key: "productDateCreation", value: product.productDateCreation},
-        { key: "productShortDescription", value: product.productShortDescription},
-        { key: "productDescription", value: product.productDescription},
+        { key: "productDateCreation", value: product.productDateCreation },
+        { key: "productShortDescription", value: product.productShortDescription },
+        { key: "productDescription", value: product.productDescription },
       ],
       stock_status: product.availability ? "instock" : "outofstock",
     };
 
-    // 🚫 Skip image reupload if updating
+    // ✅ Add price & category only for new products
     if (!existing) {
+      payload.regular_price = regularPrice;
+      if (categoryId) payload.categories = [{ id: categoryId }];
       payload.images = images;
     }
 
@@ -162,16 +246,29 @@ async function upsertProductSafe(product) {
   }
 }
 
+
 // ---------------- BULK SYNC ----------------
 export async function bulkSafeSyncProducts(req, res) {
   console.log("🔄 Starting bulk sync (safe mode) from local DB → WooCommerce...");
 
   try {
+
+    
     const rows = await new Promise((resolve, reject) => {
-      DB.all("SELECT * FROM PRODUCTS ORDER BY productDateCreation DESC;", [], (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-      });
+      const currentTimestamp = Date.now(); // Current timestamp in milliseconds
+      const oneDayAgo = currentTimestamp - 24 * 60 * 60 * 1000; // 24 hours ago in milliseconds
+      
+      DB.all(
+        "SELECT * FROM PRODUCTS WHERE productLastUpdated >= ? ORDER BY datetime(productLastUpdated / 1000, 'unixepoch') DESC;",
+        [oneDayAgo],
+        (err, result) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(result);
+          }
+        }
+      );
     });
 
     console.log(`📦 Found ${rows.length} products to sync.`);

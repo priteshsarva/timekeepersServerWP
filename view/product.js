@@ -130,7 +130,7 @@ product.get('/allresults', (req, res) => {
 
 });
 
-product.get("/bulkSyncProducts", bulkSyncProducts);
+// product.get("/bulkSyncProducts", bulkSyncProducts);
 product.get("/bulkSafeSyncProducts", bulkSafeSyncProducts);
 
 
@@ -297,10 +297,12 @@ product.get('/firstdata', (req, res) => {
         "Mens Watch",
         "Ladies Watch",
         "Luxury Watch",
-    ]; db.all("SELECT * FROM products WHERE productId = ?", ['sync-products'], (err, rows) => {
-        if (err) console.error(err);
-        else console.log(rows);
-    });
+    ];
+    // dont know where this code come from----------------------------------------------------
+    //  db.all("SELECT * FROM products WHERE productId = ?", ['sync-products'], (err, rows) => {
+    //     if (err) console.error(err);
+    //     else console.log(rows);
+    // });
 
     const itemsPerCategory = 30;
     const allPromises = categories.map(category => {
