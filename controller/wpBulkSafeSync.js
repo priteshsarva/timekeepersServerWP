@@ -205,6 +205,7 @@ async function upsertProductSafe(product) {
       short_description: product.productShortDescription || "",
       meta_data: [
         { key: "productFetchedFrom", value: product.productFetchedFrom },
+        { key: "productUrl", value: product.productUrl },
         { key: "videoUrl", value: product.videoUrl || "" },
         { key: "availability", value: product.availability ? "instock" : "outofstock" },
         { key: "productOriginalPrice", value: product.productOriginalPrice },
@@ -223,6 +224,7 @@ async function upsertProductSafe(product) {
     if (!existing) {
       payload.regular_price = regularPrice;
       if (categoryId) payload.categories = [{ id: categoryId }];
+      if (product.productBrand) payload.tags = [{ name: product.productBrand }];
       payload.images = images;
     }
 
@@ -253,14 +255,17 @@ export async function bulkSafeSyncProducts(req, res) {
 
   try {
 
-    
+
     const rows = await new Promise((resolve, reject) => {
       const currentTimestamp = Date.now(); // Current timestamp in milliseconds
-      const oneDayAgo = currentTimestamp - 24 * 60 * 60 * 1000; // 24 hours ago in milliseconds
-      
+      // const oneDayAgo = currentTimestamp - 24 * 60 * 60 * 1000; // 24 hours ago in milliseconds
+      const twelveAndHalfHoursAgo = currentTimestamp - 15.5 * 60 * 60 * 1000; // 12.5 hours ago in milliseconds
+
+
       DB.all(
         "SELECT * FROM PRODUCTS WHERE productLastUpdated >= ? ORDER BY datetime(productLastUpdated / 1000, 'unixepoch') DESC;",
-        [oneDayAgo],
+        // [oneDayAgo],
+        [twelveAndHalfHoursAgo],
         (err, result) => {
           if (err) {
             reject(err);
