@@ -223,7 +223,7 @@ async function upsertProductSafe(product) {
     if (!existing) {
       payload.regular_price = regularPrice;
       if (categoryId) payload.categories = [{ id: categoryId }];
-      payload.images = images;
+      // payload.images = images;
     }
 
     const res = await fetch(endpoint, {
@@ -273,8 +273,8 @@ export async function bulkSafeSyncProducts(req, res) {
 
     console.log(`📦 Found ${rows.length} products to sync.`);
 
-    const batchSize = 50;
-    const delayMs = 500;
+    const batchSize = 5;
+    const delayMs = 1500;
 
     for (let i = 0; i < rows.length; i += batchSize) {
       const batch = rows.slice(i, i + batchSize);
