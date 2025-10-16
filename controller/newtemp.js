@@ -11,6 +11,7 @@ import "dotenv/config";
 import { exec } from 'child_process';
 import { humanizePage, humanType } from './humanize.js';
 import { log } from 'console';
+import {upsertProductSafe} from './wpBulkSafeSync.js'
 
 // const baseUrls = ['https://oneshoess.cartpe.in', 'https://reseller-store.cartpe.in'];
 // const baseUrls = ['https://oneshoess.cartpe.in'];
@@ -337,6 +338,7 @@ async function scrapeProducts(page, categories, baseUrl) {
             console.log("from try block");
             for (const eachproduct of catProductss) {
                 await updateProduct(eachproduct);
+                await upsertProductSafe(eachproduct);
                 console.log("From Each Product");
             }
             products.push(...catProductss)
