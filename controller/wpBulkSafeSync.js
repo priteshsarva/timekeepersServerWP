@@ -220,11 +220,10 @@ async function getOrCreateBrand(brandName) {
 
 export async function upsertProductSafe(product, productId = null) {
   console.log("triggered");
-  console.log(product);
-  
+
 
   try {
-    const sku = product.productId?.toString();
+    const sku = (productId ?? product.productId)?.toString()
     if (!sku) {
       console.warn(`⚠️ Skipping product — missing productId: ${product.productName}`);
     }
@@ -252,7 +251,7 @@ export async function upsertProductSafe(product, productId = null) {
     }
 
     const categoryId = !existing ? await getOrCreateCategory(product.catName) : null;
-    const brandId = !existing ? await getOrCreateBrand(product.productBrand) : null;
+    const brandId = existing ? await getOrCreateBrand(product.productBrand) : null;
 
     let images = [];
     try {
@@ -289,6 +288,8 @@ export async function upsertProductSafe(product, productId = null) {
       ],
     };
 
+
+    
     // ✅ Add price, category & brand only for new products
     if (!existing) {
       payload.regular_price = regularPrice;
@@ -333,8 +334,8 @@ export async function bulkSafeSyncProducts(req, res) {
 
     const rows = await new Promise((resolve, reject) => {
       const currentTimestamp = Date.now(); // Current timestamp in milliseconds
-      // const oneDayAgo = currentTimestamp - 24 * 60 * 60 * 1000; // 24 hours ago in milliseconds
-      const twelveAndHalfHoursAgo = currentTimestamp - 100 * 60 * 60 * 1000; // 12.5 hours ago in milliseconds
+      // const oneDayAgo = currentTimestamp - 100 * 60 * 60 * 1000; // 24 hours ago in milliseconds
+      const twelveAndHalfHoursAgo = currentTimestamp - 1000 * 60 * 60 * 1000; // 12.5 hours ago in milliseconds
 
 
       DB.all(
