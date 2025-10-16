@@ -2,6 +2,7 @@
 import fetch from "node-fetch";
 import "dotenv/config";
 import { DB } from "../connect.js";
+import { log } from "console";
 
 const WP_URL = process.env.WP_URL;
 const WP_CONSUMER_KEY = process.env.WP_CONSUMER_KEY;
@@ -87,6 +88,10 @@ async function getProductBySKU(sku) {
     }
 
     const data = await res.json();
+    console.log(data);
+    console.log(data.length > 0 ? data[0] : null);
+
+    
     return data.length > 0 ? data[0] : null;
   } catch (err) {
     console.error("❌ Error checking product:", err);
