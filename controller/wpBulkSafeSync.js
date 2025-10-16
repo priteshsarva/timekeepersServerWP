@@ -91,7 +91,7 @@ async function getProductBySKU(sku) {
     console.log(data);
     console.log(data.length > 0 ? data[0] : null);
 
-    
+
     return data.length > 0 ? data[0] : null;
   } catch (err) {
     console.error("❌ Error checking product:", err);
@@ -237,12 +237,14 @@ export async function upsertProductSafe(product, productId = null) {
 
     // Use passed productId if available, otherwise look up by SKU
     let existing = null;
-    if (!productId) {
-      existing = await getProductBySKU(sku);
-      if (existing) productId = existing.id;
-    } else {
-      existing = { id: productId };
-    }
+    existing = await getProductBySKU(sku);
+
+    // if (!productId) {
+    //   existing = await getProductBySKU(sku); 
+    //   if (existing) productId = existing.id;
+    // } else {
+    //   existing = { id: productId };
+    // }
 
     let method = "POST";
     let endpoint = `${WP_URL}/wp-json/wc/v3/products`;
@@ -294,7 +296,7 @@ export async function upsertProductSafe(product, productId = null) {
     };
 
 
-    
+
     // ✅ Add price, category & brand only for new products
     if (!existing) {
       payload.regular_price = regularPrice;
