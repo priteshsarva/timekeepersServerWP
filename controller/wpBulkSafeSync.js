@@ -258,7 +258,9 @@ export async function upsertProductSafe(product, productId = null) {
     }
 
     const categoryId = !existing ? await getOrCreateCategory(product.catName) : null;
-    const brandId = existing ? await getOrCreateBrand(product.productBrand) : null;
+    // const brandId = !existing ? await getOrCreateBrand(product.productBrand) : null;  //use while creating new
+    // const brandId = existing ? await getOrCreateBrand(product.productBrand) : null;  //used while i was doing bulk update
+    const brandId = existing ? await getOrCreateBrand(product.productBrand) : null;  //used while i was doing bulk update from devupdate
 
     let images = [];
     try {
