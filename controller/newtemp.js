@@ -338,7 +338,7 @@ async function scrapeProducts(page, categories, baseUrl) {
             console.log("from try block");
             for (const eachproduct of catProductss) {
                 const productId = await updateProduct(eachproduct);
-              //  await upsertProductSafe(eachproduct, productId);
+                await upsertProductSafe(eachproduct, productId);
                 console.log("From Each Product");
             }
             products.push(...catProductss)
@@ -407,62 +407,50 @@ async function scrapeProducts(page, categories, baseUrl) {
 //     }
 // }
 
-async function addProductToDatabase(product) {
+
+
+
+function addProductToDatabase(product, callback) {
     console.log("from add product");
     console.log(product);
 
-    try {
-        const sql = `INSERT INTO PRODUCTS (
-            productName, productOriginalPrice, productBrand, featuredimg, 
-            sizeName, productUrl, imageUrl, videoUrl, availability, productShortDescription, 
-            catName, productFetchedFrom, productLastUpdated
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const sql = `INSERT INTO PRODUCTS (
+        productName, productOriginalPrice, productBrand, featuredimg, 
+        sizeName, productUrl, imageUrl, videoUrl, availability, productShortDescription, 
+        catName, productFetchedFrom, productLastUpdated
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-        // ✅ Wrap DB.run in Promise
-        await new Promise((resolve, reject) => {
-            DB.run(sql, [
-                product.productName,
-                product.productOriginalPrice,
-                product.productBrand,
-                product.featuredimg,
-                JSON.stringify(product.sizeName),
-                product.productUrl,
-                JSON.stringify(product.imageUrl),
-                product.videoUrl,
-                product.availability,
-                product.productShortDescription,
-                product.catName,
-                product.productFetchedFrom,
-                Date.now()
-            ], function (err) {
-                if (err) reject(err);
-                else resolve(this.lastID); // resolve immediately with inserted ID
-            });
-        });
+    const values = [
+        product.productName,
+        product.productOriginalPrice,
+        product.productBrand,
+        product.featuredimg,
+        JSON.stringify(product.sizeName),
+        product.productUrl,
+        JSON.stringify(product.imageUrl),
+        product.videoUrl,
+        product.availability,
+        product.productShortDescription,
+        product.catName,
+        product.productFetchedFrom,
+        Date.now()
+    ];
 
-        // ✅ Wrap DB.get in Promise to fetch last inserted rowid
-        const row = await new Promise((resolve, reject) => {
-            DB.get(`SELECT last_insert_rowid() as lastID`, (err, row) => {
-                if (err) reject(err);
-                else resolve(row);
-            });
-        });
+    // Step 1: Insert into DB
+    DB.run(sql, values, function (err) {
+        if (err) {
+            console.error('❌ Error adding product to database:', err.message);
+            return callback(err);
+        }
 
-        const lastID = row.lastID;
-        console.log("Last inserted ID:", lastID);
-
-        if (!lastID) throw new Error('Failed to retrieve last inserted ID');
-
-
-
+        const lastID = this.lastID;
         console.log('✅ Inserted product with ID:', lastID);
-        return lastID;
 
-    } catch (error) {
-        console.error('❌ Error adding product to database:', error.message);
-        throw error;
-    }
+        // Step 2: Return lastID via callback
+        return callback(null, lastID);
+    });
 }
+
 
 
 
