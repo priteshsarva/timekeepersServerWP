@@ -88,10 +88,6 @@ async function getProductBySKU(sku) {
     }
 
     const data = await res.json();
-    console.log(data);
-    console.log(data.length > 0 ? data[0] : null);
-
-
     return data.length > 0 ? data[0] : null;
   } catch (err) {
     console.error("❌ Error checking product:", err);
@@ -224,8 +220,6 @@ async function getOrCreateBrand(brandName) {
 }
 
 export async function upsertProductSafe(product, productId = null) {
-  console.log("triggered");
-
 
   try {
     const sku = (productId ?? product.productId)?.toString()

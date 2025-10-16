@@ -338,7 +338,7 @@ async function scrapeProducts(page, categories, baseUrl) {
             console.log("from try block");
             for (const eachproduct of catProductss) {
                 const productId = await updateProduct(eachproduct);
-                await upsertProductSafe(eachproduct, productId);
+              //  await upsertProductSafe(eachproduct, productId);
                 console.log("From Each Product");
             }
             products.push(...catProductss)
@@ -770,7 +770,7 @@ async function updateProduct(product) {
             console.log("Product uploaded");
 
             productId = await addProductToDatabase(product);
-         //   await addProductRelationships(productId, product);
+            await addProductRelationships(productId, product);
         }
 
         // ✅ Return the productId in all cases
