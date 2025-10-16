@@ -338,7 +338,7 @@ async function scrapeProducts(page, categories, baseUrl) {
             console.log("from try block");
             for (const eachproduct of catProductss) {
                 await updateProduct(eachproduct);
-                await upsertProductSafe(eachproduct);
+                upsertProductSafe(eachproduct);
                 console.log("From Each Product");
             }
             products.push(...catProductss)
