@@ -220,6 +220,8 @@ async function getOrCreateBrand(brandName) {
 
 export async function upsertProductSafe(product, productId = null) {
   console.log("triggered");
+  console.log(product);
+  
 
   try {
     const sku = product.productId?.toString();
