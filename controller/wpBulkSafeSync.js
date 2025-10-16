@@ -205,9 +205,9 @@ async function getOrCreateBrand(brandName) {
   }
 }
 
-export async function upsertProductSafe(product) {
+export async function upsertProductSafe(product, productId = null) {
   console.log("triggered");
-  
+
   try {
     const sku = product.productId?.toString();
     if (!sku) {
@@ -215,7 +215,17 @@ export async function upsertProductSafe(product) {
       return;
     }
 
-    const existing = await getProductBySKU(sku);
+    // const existing = await getProductBySKU(sku);
+    
+    // Use passed productId if available, otherwise look up by SKU
+    let existing = null;
+    if (!productId) {
+      existing = await getProductBySKU(sku);
+      if (existing) productId = existing.id;
+    } else {
+      existing = { id: productId };
+    }
+
     let method = "POST";
     let endpoint = `${WP_URL}/wp-json/wc/v3/products`;
 

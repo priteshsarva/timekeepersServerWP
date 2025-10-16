@@ -11,7 +11,7 @@ import "dotenv/config";
 import { exec } from 'child_process';
 import { humanizePage, humanType } from './humanize.js';
 import { log } from 'console';
-import {upsertProductSafe} from './wpBulkSafeSync.js'
+import { upsertProductSafe } from './wpBulkSafeSync.js'
 
 // const baseUrls = ['https://oneshoess.cartpe.in', 'https://reseller-store.cartpe.in'];
 // const baseUrls = ['https://oneshoess.cartpe.in'];
@@ -337,8 +337,8 @@ async function scrapeProducts(page, categories, baseUrl) {
         try {
             console.log("from try block");
             for (const eachproduct of catProductss) {
-                await updateProduct(eachproduct);
-                upsertProductSafe(eachproduct);
+                const productId = await updateProduct(eachproduct);
+                await upsertProductSafe(eachproduct, productId);
                 console.log("From Each Product");
             }
             products.push(...catProductss)
@@ -453,7 +453,7 @@ async function addProductToDatabase(product) {
 
         if (!lastID) throw new Error('Failed to retrieve last inserted ID');
 
-      
+
 
         console.log('✅ Inserted product with ID:', lastID);
         return lastID;
@@ -696,8 +696,10 @@ async function updateProduct(product) {
 
         console.log(`Row: ${JSON.stringify(row)}`);
 
+        let productId;
+
         if (row && row.length > 0) {
-            const productId = row[0].productId;
+            productId = row[0].productId;
             console.log(`Product ID: ${productId}`);
 
             // Step 2: Update all values where productId matches
@@ -705,7 +707,6 @@ async function updateProduct(product) {
             const updates = [];
             const values = [];
             console.log(updateQuery);
-
 
             if (typeof product.productPrice !== 'undefined') {
                 updates.push(`productPrice = ?`);
@@ -719,13 +720,6 @@ async function updateProduct(product) {
                 updates.push(`productOriginalPrice = ?`);
                 values.push(product.productOriginalPrice);
             }
-            //   if (typeof product.catName !== 'undefined') {
-            //        if (product.catName !== row[0].catName) {
-            //            updates.push(`catName = ?`);
-            //            values.push(product.catName + ", " + row[0].catName);
-            //        }
-            //}
-
             if (typeof product.sizeName !== 'undefined') {
                 updates.push(`sizeName = ?`);
                 values.push(JSON.stringify(product.sizeName));
@@ -735,72 +729,59 @@ async function updateProduct(product) {
                 values.push(JSON.stringify(product.availability));
             }
 
-            // if (typeof product.productLastUpdated !== 'undefined') {
-            //     updates.push(`productLastUpdated = ?`);
-            //     values.push(product.productLastUpdated);
-            // } else {
-            //     updates.push(`productLastUpdated = ?`);
-            //     values.push(Date.now());
-            // }
             updates.push(`productLastUpdated = ?`);
             values.push(Date.now());
 
             // Check if there are fields to update
-            if (updates.length === 0) {
-                console.log("No fields to update.");
-                return;
-            }
+            if (updates.length > 0) {
+                const sql = updateQuery + updates.join(', ') + ` WHERE productId = ?`;
 
-            const sql = updateQuery + updates.join(', ') + ` WHERE productId = ?`;
+                try {
+                    const params = [...values, productId];
+                    console.log("Executing update query:", sql, params);
 
-            try {
-                const params = [...values, productId]
-                // const params = ['1500', '[45,48,50,52]', 1738772214590, 1]
-                console.log("Executing update query:", sql, [...values, productId]);
-                //  const stmt = DB.prepare(sql);
-                // const result = stmt.run(...params);
-                // ✅ Use Promise wrapper to handle .run correctly
-
-                const changes = await new Promise((resolve, reject) => {
-                    const stmt = DB.prepare(sql);
-                    stmt.run(...params, function (err) {
-                        if (err) {
-                            reject(err);
-                        } else {
-                            resolve(this.changes);
-                        }
+                    const changes = await new Promise((resolve, reject) => {
+                        const stmt = DB.prepare(sql);
+                        stmt.run(...params, function (err) {
+                            if (err) {
+                                reject(err);
+                            } else {
+                                resolve(this.changes);
+                            }
+                        });
+                        stmt.finalize();
                     });
-                    stmt.finalize();
-                });
 
-                if (changes === 1) {
-                    console.log(JSON.stringify({ status: 200, message: `Data updated with id: ${productId}` }));
-                
-
-                } else {
-                    console.log(JSON.stringify({ status: 201, message: `No data has been changed` }));
-                   
-
-                }
-            } catch (err) {
-                if (err.code === 'SQLITE_CONSTRAINT') {
-                    console.error({ code: 400, status: "Unique constraint failed", message: "A record with this unique value already exists." });
-                } else {
-                    console.error({ code: 500, status: "Internal Server Error", message: err.message });
+                    if (changes === 1) {
+                        console.log(JSON.stringify({ status: 200, message: `Data updated with id: ${productId}` }));
+                    } else {
+                        console.log(JSON.stringify({ status: 201, message: `No data has been changed` }));
+                    }
+                } catch (err) {
+                    if (err.code === 'SQLITE_CONSTRAINT') {
+                        console.error({ code: 400, status: "Unique constraint failed", message: "A record with this unique value already exists." });
+                    } else {
+                        console.error({ code: 500, status: "Internal Server Error", message: err.message });
+                    }
                 }
             }
         } else {
             console.log('No product found with the given URL.');
             console.log("Product uploaded");
 
-            const productId = await addProductToDatabase(product);
+            productId = await addProductToDatabase(product);
             await addProductRelationships(productId, product);
         }
 
+        // ✅ Return the productId in all cases
+        return productId;
+
     } catch (error) {
         console.error("Error in query:", error.message);
+        return null; // Return null if there was a failure
     }
 }
+
 
 
 
