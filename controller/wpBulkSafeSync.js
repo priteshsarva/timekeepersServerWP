@@ -212,7 +212,6 @@ export async function upsertProductSafe(product, productId = null) {
     const sku = product.productId?.toString();
     if (!sku) {
       console.warn(`⚠️ Skipping product — missing productId: ${product.productName}`);
-      return;
     }
 
     // const existing = await getProductBySKU(sku);
