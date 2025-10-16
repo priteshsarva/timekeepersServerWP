@@ -81,6 +81,7 @@ async function getProductBySKU(sku) {
   }
 }
 
+
 // async function upsertProductSafe(product) {
 //   try {
 //     const sku = product.productId?.toString();
@@ -164,7 +165,47 @@ async function getProductBySKU(sku) {
 
 
 
-async function upsertProductSafe(product) {
+async function getOrCreateBrand(brandName) {
+  if (!brandName) return null;
+
+  try {
+    const searchUrl = `${WP_URL}/wp-json/wp/v2/product_brand?search=${encodeURIComponent(brandName)}`;
+    const searchRes = await fetch(searchUrl, {
+      headers: { Authorization: getAuthHeader() },
+    });
+    const existing = await searchRes.json();
+
+    if (existing.length > 0) {
+      console.log(`🏷️ Found existing brand: ${existing[0].name} (ID: ${existing[0].id})`);
+      return existing[0].id;
+    }
+
+    // Create new brand if not found
+    const createRes = await fetch(`${WP_URL}/wp-json/wp/v2/product_brand`, {
+      method: "POST",
+      headers: {
+        Authorization: getAuthHeader(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name: brandName }),
+    });
+
+    const newBrand = await createRes.json();
+
+    if (createRes.ok) {
+      console.log(`🆕 Created new brand: ${newBrand.name} (ID: ${newBrand.id})`);
+      return newBrand.id;
+    } else {
+      console.error("❌ Error creating brand:", newBrand);
+      return null;
+    }
+  } catch (err) {
+    console.error("❌ Brand lookup/creation failed:", err);
+    return null;
+  }
+}
+
+export async function upsertProductSafe(product) {
   try {
     const sku = product.productId?.toString();
     if (!sku) {
@@ -185,6 +226,7 @@ async function upsertProductSafe(product) {
     }
 
     const categoryId = !existing ? await getOrCreateCategory(product.catName) : null;
+    const brandId = !existing ? await getOrCreateBrand(product.productBrand) : null;
 
     let images = [];
     try {
@@ -196,13 +238,15 @@ async function upsertProductSafe(product) {
 
     const regularPrice = ((product.productOriginalPrice || 0) + 1200).toString();
 
-    // ✅ Base payload (shared between create + update)
+    // ✅ Base payload
     const payload = {
       name: product.productName,
       type: "simple",
       sku,
       description: product.productDescription || "",
       short_description: product.productShortDescription || "",
+      stock_status: product.availability ? "instock" : "outofstock",
+      brands: [{ id: brandId }], // for temp
       meta_data: [
         { key: "productFetchedFrom", value: product.productFetchedFrom },
         { key: "productUrl", value: product.productUrl },
@@ -217,15 +261,20 @@ async function upsertProductSafe(product) {
         { key: "productShortDescription", value: product.productShortDescription },
         { key: "productDescription", value: product.productDescription },
       ],
-      stock_status: product.availability ? "instock" : "outofstock",
     };
 
-    // ✅ Add price & category only for new products
+    // ✅ Add price, category & brand only for new products
     if (!existing) {
       payload.regular_price = regularPrice;
+
       if (categoryId) payload.categories = [{ id: categoryId }];
+
+      // Directly assign the brand for new products
+      if (brandId) payload.brands = [{ id: brandId }];
+
       // payload.images = images;
     }
+
 
     const res = await fetch(endpoint, {
       method,
@@ -248,6 +297,7 @@ async function upsertProductSafe(product) {
 }
 
 
+
 // ---------------- BULK SYNC ----------------
 export async function bulkSafeSyncProducts(req, res) {
   console.log("🔄 Starting bulk sync (safe mode) from local DB → WooCommerce...");
@@ -258,7 +308,7 @@ export async function bulkSafeSyncProducts(req, res) {
     const rows = await new Promise((resolve, reject) => {
       const currentTimestamp = Date.now(); // Current timestamp in milliseconds
       // const oneDayAgo = currentTimestamp - 24 * 60 * 60 * 1000; // 24 hours ago in milliseconds
-      const twelveAndHalfHoursAgo = currentTimestamp - 15.5 * 60 * 60 * 1000; // 12.5 hours ago in milliseconds
+      const twelveAndHalfHoursAgo = currentTimestamp - 100 * 60 * 60 * 1000; // 12.5 hours ago in milliseconds
 
 
       DB.all(

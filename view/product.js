@@ -1,12 +1,10 @@
 import { log } from "console";
 import { DB } from "../connect.js";
 import express from "express";
-import { bulkSyncProducts } from "../controller/wpBulkSync.js";
 import { bulkSafeSyncProducts } from "../controller/wpBulkSafeSync.js";
 
 const product = express()
 
-import { upsertProduct } from "../controller/wpProduct.js";
 
 
 // Import necessary modules
@@ -130,7 +128,6 @@ product.get('/allresults', (req, res) => {
 
 });
 
-// product.get("/bulkSyncProducts", bulkSyncProducts);
 product.get("/bulkSafeSyncProducts", bulkSafeSyncProducts);
 
 
