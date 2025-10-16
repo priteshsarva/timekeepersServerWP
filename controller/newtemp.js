@@ -770,7 +770,7 @@ async function updateProduct(product) {
             console.log("Product uploaded");
 
             productId = await addProductToDatabase(product);
-            await addProductRelationships(productId, product);
+         //   await addProductRelationships(productId, product);
         }
 
         // ✅ Return the productId in all cases
