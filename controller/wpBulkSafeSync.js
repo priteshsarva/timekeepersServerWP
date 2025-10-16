@@ -8,9 +8,22 @@ const WP_CONSUMER_KEY = process.env.WP_CONSUMER_KEY;
 const WP_CONSUMER_SECRET = process.env.WP_CONSUMER_SECRET;
 
 function getAuthHeader() {
-  const auth = Buffer.from(`${WP_CONSUMER_KEY}:${WP_CONSUMER_SECRET}`).toString("base64");
-  return `Basic ${auth}`;
+  // const auth = Buffer.from(`${WP_CONSUMER_KEY}:${WP_CONSUMER_SECRET}`).toString("base64");
+  // return `Basic ${auth}`;
+
+  const username = process.env.WP_USER; // <-- add this to your .env
+  const appPassword = process.env.WP_APP_PASSWORD; // <-- add this to your .env
+  const token = Buffer.from(`${username}:${appPassword}`).toString("base64");
+  return `Basic ${token}`;
 }
+
+function getAuthHeadertocreactbrand() {
+  const username = process.env.WP_USER; // <-- add this to your .env
+  const appPassword = process.env.WP_APP_PASSWORD; // <-- add this to your .env
+  const token = Buffer.from(`${username}:${appPassword}`).toString("base64");
+  return `Basic ${token}`;
+}
+
 
 // ---------------- CATEGORY HELPERS ----------------
 async function getCategoryByName(name) {
@@ -215,7 +228,7 @@ export async function upsertProductSafe(product, productId = null) {
     }
 
     // const existing = await getProductBySKU(sku);
-    
+
     // Use passed productId if available, otherwise look up by SKU
     let existing = null;
     if (!productId) {
